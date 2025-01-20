@@ -4,4 +4,4 @@ from .models import Feed
 class FeedSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Feed
-		fields = ['id','title', 'description']
+		fields = ['id','title', 'content']

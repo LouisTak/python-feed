@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class FeedConfig(AppConfig):
+class UsersConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'api.feed'
-    label = 'feed'
+    name = 'api.users'
+    label = 'users'
