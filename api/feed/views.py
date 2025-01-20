@@ -2,33 +2,52 @@ from rest_framework.response import Response
 from rest_framework import status	
 from .models import Feed
 from .serializer import FeedSerializer
-from rest_framework.generics import GenericAPIView
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
-class FeedsView(GenericAPIView):
+class FeedListCreateView(generics.ListCreateAPIView):
 	queryset = Feed.objects.all()
 	serializer_class = FeedSerializer
+	permission_classes = [IsAuthenticatedOrReadOnly]
 
-	def get(self, request, *args, **kwargs):
-		feeds = self.get_queryset()
-		serializer = self.get_serializer(feeds, many=True)
-		return Response(serializer.data)
+	@swagger_auto_schema(
+		operation_summary="List all feeds or create a new feed",
+		operation_description="Get a list of all feeds or create a new one. Authentication required for creation.",
+		request_body=FeedSerializer,
+		responses={
+			201: openapi.Response(
+				description="Feed created successfully",
+				schema=FeedSerializer
+			)
+		}
+	)
+	def get_serializer_context(self):
+		context = super().get_serializer_context()
+		return context
 
-	def post(self, request, *args, **kwargs):
-		serializer = self.get_serializer(data=request.data)
-		if serializer.is_valid():
-			serializer.save()
-			return Response(serializer.data, status=status.HTTP_201_CREATED)
-		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+	def perform_create(self, serializer):
+		serializer.save()
 
-	def put(self, request, *args, **kwargs):
-		feed = self.get_object()
-		serializer = self.get_serializer(feed, data=request.data, partial=True)
-		if serializer.is_valid():
-			serializer.save()
-			return Response(serializer.data)
-		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class FeedDetailView(generics.RetrieveUpdateDestroyAPIView):
+	queryset = Feed.objects.all()
+	serializer_class = FeedSerializer
+	permission_classes = [IsAuthenticatedOrReadOnly]
 
-	def delete(self, request, *args, **kwargs):
-		feed = self.get_object()
-		feed.delete()
-		return Response(status=status.HTTP_204_NO_CONTENT)
+	@swagger_auto_schema(
+		operation_summary="Retrieve, update or delete a feed",
+		operation_description="Get, update or delete a specific feed. Authentication required for update and delete."
+	)
+	def perform_update(self, serializer):
+		# Ensure only the author can update their own feeds
+		if serializer.instance.author != self.request.user:
+			raise PermissionError("You can only update your own feeds")
+		serializer.save()
+
+	def destroy(self, request, *args, **kwargs):
+		instance = self.get_object()
+		# Ensure only the author can delete their own feeds
+		if instance.author != request.user:
+			raise PermissionError("You can only delete your own feeds")
+		return super().destroy(request, *args, **kwargs)
