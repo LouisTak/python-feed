@@ -10,6 +10,9 @@ WORKDIR /app
 # Copy the requirements file
 COPY requirements.txt .
 
+# Copy the .env file
+COPY .env .
+
 # Install the dependencies
 RUN pip install -r requirements.txt
 
